@@ -14,7 +14,7 @@ const schema = new Schema(
     role: {
       type: String,
       required: [true, "Please enter a role"],
-      enum: ["super_admin", "admin", "user"],
+      enum: ["super_admin", "master", "user"],
       default: "user",
     },
     gender: {

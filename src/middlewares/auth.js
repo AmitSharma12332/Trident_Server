@@ -17,11 +17,6 @@ const isAuthenticated = TryCatch(async (req, res, next) => {
     if (!user)
       return next(new ErrorHandler("Not authorized, user not found", 404));
 
-    if (user.status === "banned")
-      return next(
-        new ErrorHandler("Your account is banned. Please contact support.", 400)
-      );
-
     req.user = decodedData._id;
     next();
   } catch (error) {
@@ -38,7 +33,7 @@ const adminOnly = TryCatch(async (req, res, next) => {
   const user = await User.findById(req.user);
   if (!user) return next(new ErrorHandler("User Not Found", 404));
 
-  if (user.role !== "admin")
+  if (user.role !== "master")
     return next(new ErrorHandler("Unauthorized Access", 403));
 
   next();
@@ -58,7 +53,7 @@ const adminOrSuperAdmin = TryCatch(async (req, res, next) => {
   const user = await User.findById(req.user);
   if (!user) return next(new ErrorHandler("User Not Found", 404));
 
-  if (user.role !== "super_admin" && user.role !== "admin")
+  if (user.role !== "super_admin" && user.role !== "master")
     return next(new ErrorHandler("Unauthorized Access", 403));
 
   next();

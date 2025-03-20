@@ -25,7 +25,7 @@ config({
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || "";
-const NODE_ENV = process.env.NODE_ENV.trim() || "PRODUCTION";
+const NODE_ENV = (process.env.NODE_ENV || "").trim() || "production";
 const API_BASE_URL = process.env.API_BASE_URL || "";
 
 connectDB(MONGO_URI);

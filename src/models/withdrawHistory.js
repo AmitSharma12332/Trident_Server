@@ -12,26 +12,9 @@ const schema = new Schema(
       required: true,
       ref: "User",
     },
-    accNo: {
+    userName: {
       type: String,
       required: true,
-    },
-    ifsc: {
-      type: String,
-      required: true,
-    },
-    bankName: {
-      type: String,
-      required: true,
-    },
-    receiverName: {
-      type: String,
-      required: true,
-    },
-    contact: {
-      type: String,
-      required: true,
-      match: [/^\d{10}$/, "Invalid contact number"],
     },
     amount: {
       type: Number,

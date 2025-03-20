@@ -16,6 +16,11 @@ const placeBet = TryCatch(async (req, res, next) => {
   const user = await User.findById(req.user);
   if (!user) return next(new ErrorHandler("User not found", 404));
 
+  if (user.status === "banned")
+    return next(
+      new ErrorHandler("Your account is banned. Please contact support.", 400)
+    );
+
   let {
     eventId,
     match,
