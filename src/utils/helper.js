@@ -49,61 +49,65 @@ const calculateNewMargin = (margin, selectionId, type, profit, loss) => {
 };
 
 const calculateFancyExposure = async (userId, eventId) => {
-  const margins = await Margin.find({ userId, eventId });
+  const bets = await Bet.find({
+    userId,
+    eventId,
+    status: "pending",
+    category: "fancy",
+  }).sort({ fancyNumber: 1 });
 
-  const marketMargins = {};
-  for (const margin of margins) {
-    const { status } = await Bet.findOne({ marketId: margin.marketId }).sort({
-      createdAt: -1,
-    });
-    if (status !== "pending") continue;
-    if (!marketMargins[margin.marketId]) {
-      marketMargins[margin.marketId] = [];
-    }
-    marketMargins[margin.marketId].push(margin);
+  const marketBets = {};
+  for (const bet of bets) {
+    if (!marketBets[bet.marketId]) marketBets[bet.marketId] = [];
+    marketBets[bet.marketId].push(bet);
   }
 
   const marketExposure = {};
-  for (const [marketId, margins] of Object.entries(marketMargins)) {
-    const selectionGroups = { 1: [], 2: [] };
-
-    for (const margin of margins) {
-      if (margin.selectionId === "1" || margin.selectionId === "2") {
-        selectionGroups[margin.selectionId].push(margin);
-      }
-    }
-
+  for (const [marketId, betList] of Object.entries(marketBets)) {
+    let firstBackIndex = -1;
+    let firstLayFromLastIndex = -1;
     let exposure = 0;
 
-    for (const margin of selectionGroups["2"]) exposure += margin.loss;
-    for (const margin of selectionGroups["1"]) exposure += margin.profit;
-
-    // console.log(selectionGroups["1"]);
-    // console.log(selectionGroups["2"]);
-
-    const usedBacks = new Set();
-    const usedLays = new Set();
-
-    for (const back of selectionGroups["1"]) {
-      for (const lay of selectionGroups["2"]) {
-        if (
-          !usedBacks.has(back) &&
-          !usedLays.has(lay) &&
-          back.fancyNumber <= lay.fancyNumber
-        ) {
-          exposure +=
-            lay.profit + Math.min(Math.abs(lay.loss), Math.abs(back.loss));
-          usedBacks.add(back);
-          usedLays.add(lay);
-          break;
-        }
+    for (let i = 0; i < betList.length; i++) {
+      if (betList[i].type === "back") {
+        firstBackIndex = i;
+        break;
       }
     }
 
-    marketExposure[marketId] = exposure;
-    // console.log(marketExposure);
-  }
+    for (let i = betList.length - 1; i >= 0; i--) {
+      if (betList[i].type === "lay") {
+        firstLayFromLastIndex = i;
+        break;
+      }
+    }
 
+    if (
+      firstBackIndex !== -1 &&
+      firstLayFromLastIndex !== -1 &&
+      firstBackIndex < firstLayFromLastIndex
+    ) {
+      for (let i = 0; i < firstBackIndex; i++)
+        exposure += (betList[i].stake * betList[i].odds) / 100;
+
+      let exp = 0;
+      for (let i = firstBackIndex; i <= firstLayFromLastIndex; i++) {
+        const { type, stake, odds } = betList[i];
+        const calculatedValue = (stake * odds) / 100;
+
+        exp += type === "back" ? calculatedValue : -calculatedValue;
+      }
+      exposure += Math.abs(exp);
+
+      for (let i = firstLayFromLastIndex + 1; i < betList.length; i++)
+        exposure += betList[i].stake;
+    } else {
+      for (const { type, stake, odds } of betList)
+        exposure += type === "back" ? stake : (stake * odds) / 100;
+    }
+
+    marketExposure[marketId] = -exposure;
+  }
   return marketExposure;
 };
 
