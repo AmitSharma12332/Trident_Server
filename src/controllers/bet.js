@@ -73,10 +73,10 @@ const placeBet = TryCatch(async (req, res, next) => {
 
   let endpoint;
   if (category === "bookmaker")
-    endpoint = `${API_BASE_URL}/RBookmaker?Mids=${marketId}`;
+    endpoint = ${API_BASE_URL}/RBookmaker?Mids=${marketId};
   else if (category === "match odds")
-    endpoint = `${API_BASE_URL}/RMatchOdds?Mids=${marketId}`;
-  else endpoint = `${API_BASE_URL}/RFancy?Mids=${marketId}`;
+    endpoint = ${API_BASE_URL}/RMatchOdds?Mids=${marketId};
+  else endpoint = ${API_BASE_URL}/RFancy?Mids=${marketId};
 
   const response = await axios.get(endpoint);
   if (!response.data || !response.data.length)
@@ -94,72 +94,15 @@ const placeBet = TryCatch(async (req, res, next) => {
   );
   if (error) return next(new ErrorHandler(error, 400));
 
-  if (category === "fancy") {
-    // const margins = await Margin.find({ userId: user._id, eventId, marketId });
-    // const obj = {
-    //   userId: user._id,
-    //   eventId,
-    //   marketId,
-    //   fancyNumber,
-    //   selectionId: type === "back" ? `1` : `2`,
-    //   profit: type === "lay" ? profit : loss,
-    //   loss: type === "lay" ? loss : profit,
-    // };
-    // const selectionGroups = { 1: [], 2: [] };
-
-    // for (const margin of margins) {
-    //   if (margin.selectionId === "1" || margin.selectionId === "2") {
-    //     selectionGroups[margin.selectionId].push(margin);
-    //   }
-    // }
-    // selectionGroups[obj.selectionId].push(obj);
-
-    // let exposure = 0;
-    // const usedBacks = new Set();
-    // const usedLays = new Set();
-
-    // for (const back of selectionGroups["1"]) {
-    //   for (const lay of selectionGroups["2"]) {
-    //     if (
-    //       !usedBacks.has(back) &&
-    //       !usedLays.has(lay) &&
-    //       back.fancyNumber <= lay.fancyNumber
-    //     ) {
-    //       exposure +=
-    //         lay.profit + Math.min(Math.abs(lay.loss), Math.abs(back.loss));
-    //       usedBacks.add(back);
-    //       usedLays.add(lay);
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // if (user.amount + loss + exposure < 0)
-    //   return next(new ErrorHandler("Insufficient funds", 400));
-
-    // user.amount += loss + exposure;
-    // await user.save();
-
-    await Margin.create({
-      userId: user._id,
-      eventId,
-      marketId,
-      fancyNumber,
-      selectionId: type === "back" ? `1` : `2`,
-      profit: type === "lay" ? profit : loss,
-      loss: type === "lay" ? loss : profit,
-    });
-  } else {
+  if (category !== "fancy") {
     const margin = await Margin.findOne({ userId: user._id, eventId, marketId })
       .sort({ createdAt: -1 })
       .lean();
 
     if (!margin) {
-      if (user.amount < Math.abs(loss))
+      const exposure = await calculateTotalExposure(user._id);
+      if (user.amount - exposure < Math.abs(loss))
         return next(new ErrorHandler("Insufficient balance", 400));
-
-      // user.amount += loss;
-      // await user.save();
 
       await Margin.create({
         userId: user._id,
@@ -177,12 +120,6 @@ const placeBet = TryCatch(async (req, res, next) => {
         profit,
         loss
       );
-
-      // const oldNegative = Math.min(margin.profit, margin.loss, 0);
-      // const newNegative = Math.min(newProfit, newLoss, 0);
-
-      // user.amount += Math.abs(oldNegative) + newNegative;
-      // await user.save();
 
       await Margin.create({
         userId: user._id,
