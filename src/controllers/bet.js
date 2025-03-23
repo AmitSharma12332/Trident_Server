@@ -83,7 +83,7 @@ const placeBet = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Odds Expired", 400));
 
   const exposure = await calculateTotalExposure(req.user);
-  if (user.amount - exposure < 0)
+  if (user.amount - exposure < Math.abs(loss))
     return next(new ErrorHandler("Insufficient funds", 400));
 
   const { profit, loss, error } = calculateProfitAndLoss(
@@ -113,6 +113,8 @@ const placeBet = TryCatch(async (req, res, next) => {
         loss: type === "back" ? loss : profit,
       });
     } else {
+      if (user.amount - exposure < Math.abs(loss))
+        return next(new ErrorHandler("Insufficient balance", 400));
       const { newProfit, newLoss } = calculateNewMargin(
         margin,
         selectionId,
