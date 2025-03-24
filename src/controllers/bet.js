@@ -73,10 +73,10 @@ const placeBet = TryCatch(async (req, res, next) => {
 
   let endpoint;
   if (category === "bookmaker")
-    endpoint = ${API_BASE_URL}/RBookmaker?Mids=${marketId};
+    endpoint = `${API_BASE_URL}/RBookmaker?Mids=${marketId}`;
   else if (category === "match odds")
-    endpoint = ${API_BASE_URL}/RMatchOdds?Mids=${marketId};
-  else endpoint = ${API_BASE_URL}/RFancy?Mids=${marketId};
+    endpoint = `${API_BASE_URL}/RMatchOdds?Mids=${marketId}`;
+  else endpoint = `${API_BASE_URL}/RFancy?Mids=${marketId}`;
 
   const response = await axios.get(endpoint);
   if (!response.data || !response.data.length)
