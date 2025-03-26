@@ -67,8 +67,8 @@ const getAllMarkets = TryCatch(async (req, res, next) => {
       bookMakerOddsRes.find((odd) => odd.marketId === b.market.id) || [];
 
     if (
-      b.market.status === "OPEN" &&
-      b.market.name === "Bookmaker 0%Comm" &&
+      b.market.status.toLowerCase().trim() === "open" &&
+      b.market.name.toLowerCase().trim() === "bookmaker 0% comm" &&
       odds.runners
     ) {
       const updateOdds = (runnerIndex, type, multiplier) => {
