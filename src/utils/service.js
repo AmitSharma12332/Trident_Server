@@ -66,9 +66,16 @@ const getAllMarkets = TryCatch(async (req, res, next) => {
     const odds =
       bookMakerOddsRes.find((odd) => odd.marketId === b.market.id) || [];
 
+    const extractZeroPercent = (str) => {
+      const match = str.match(/0%\b/i);
+      return match ? match[0] : null;
+    };
+
+    const zeroPercent = extractZeroPercent(b.market.name.toLowerCase().trim());
+
     if (
       b.market.status.toLowerCase().trim() === "open" &&
-      b.market.name.toLowerCase().trim() === "bookmaker 0% comm" &&
+      zeroPercent === "0%" &&
       odds.runners
     ) {
       const updateOdds = (runnerIndex, type, multiplier) => {
