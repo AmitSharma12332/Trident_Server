@@ -119,10 +119,7 @@ const placeBet = TryCatch(async (req, res, next) => {
         loss
       );
 
-      if (
-        user.amount - exposure <
-        Math.max(Math.abs(newProfit), Math.abs(newLoss))
-      )
+      if (user.amount - exposure < Math.abs(Math.min(newProfit, newLoss, 0)))
         return next(new ErrorHandler("Insufficient balance", 400));
 
       await Margin.create({
