@@ -91,8 +91,6 @@ const placeBet = TryCatch(async (req, res, next) => {
   if (error) return next(new ErrorHandler(error, 400));
 
   const exposure = await calculateTotalExposure(req.user);
-  if (user.amount - exposure < Math.abs(loss))
-    return next(new ErrorHandler("Insufficient funds", 400));
 
   if (category !== "fancy") {
     const margin = await Margin.findOne({ userId: user._id, eventId, marketId })
@@ -113,8 +111,6 @@ const placeBet = TryCatch(async (req, res, next) => {
         loss: type === "back" ? loss : profit,
       });
     } else {
-      if (user.amount - exposure < Math.abs(loss))
-        return next(new ErrorHandler("Insufficient balance", 400));
       const { newProfit, newLoss } = calculateNewMargin(
         margin,
         selectionId,
@@ -122,6 +118,12 @@ const placeBet = TryCatch(async (req, res, next) => {
         profit,
         loss
       );
+
+      if (
+        user.amount - exposure <
+        Math.max(Math.abs(newProfit), Math.abs(newLoss))
+      )
+        return next(new ErrorHandler("Insufficient balance", 400));
 
       await Margin.create({
         userId: user._id,
