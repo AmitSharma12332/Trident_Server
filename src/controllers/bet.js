@@ -136,7 +136,25 @@ const placeBet = TryCatch(async (req, res, next) => {
       });
     }
   } else {
-    if (user.amount - exposure < Math.abs(loss))
+    const tempBet = await Bet.create({
+      userId: user._id,
+      eventId,
+      match,
+      selection,
+      marketId,
+      selectionId,
+      fancyNumber,
+      stake,
+      odds,
+      category,
+      type,
+      payout: stake + profit,
+    });
+
+    const newExposure = await calculateTotalExposure(user._id);
+    await Bet.deleteOne({ _id: tempBet._id });
+
+    if (user.amount - newExposure < 0)
       return next(new ErrorHandler("Insufficient balance", 400));
   }
 
