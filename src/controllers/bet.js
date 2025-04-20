@@ -311,6 +311,7 @@ const changeBetStatus = TryCatch(async (req, res, next) => {
     pending: ["won", "lost", "cancelled"],
     won: ["lost"],
     lost: ["won"],
+    cancelled: ["pending", "won", "lost"],
   };
 
   if (!allowedTransitions[bet.status].includes(status)) {
@@ -330,13 +331,16 @@ const changeBetStatus = TryCatch(async (req, res, next) => {
     else if (status === "lost") user.amount -= bet.stake;
   } else if (bet.status === "lost") {
     user.amount += bet.payout;
-  } else {
+  } else if (bet.status === "won") {
     if (user.amount < bet.payout - 2 * bet.stake) {
       return next(
         new ErrorHandler("Insufficient balance to reverse winnings", 400)
       );
     }
     user.amount = user.amount - bet.payout - 2 * bet.stake;
+  } else if (bet.status === "cancelled") {
+    if (status === "won") user.amount += bet.payout - bet.stake;
+    else if (status === "lost") user.amount -= bet.stake;
   }
 
   await user.save();
