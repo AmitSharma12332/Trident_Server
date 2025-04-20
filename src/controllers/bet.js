@@ -71,16 +71,89 @@ const placeBet = TryCatch(async (req, res, next) => {
       );
   }
 
-  let endpoint;
-  if (category === "bookmaker")
-    endpoint = `${API_BASE_URL}/RBookmaker?Mids=${marketId}`;
-  else if (category === "match odds")
-    endpoint = `${API_BASE_URL}/RMatchOdds?Mids=${marketId}`;
-  else endpoint = `${API_BASE_URL}/RFancy?Mids=${marketId}`;
+  const endpoints = {
+    bookmaker: `${API_BASE_URL}/RBookmaker?Mids=${marketId}`,
+    "match odds": `${API_BASE_URL}/RMatchOdds?Mids=${marketId}`,
+    fancy: `${API_BASE_URL}/RFancy?Mids=${marketId}`,
+  };
 
+  const endpoint = endpoints[category] || endpoints.fancy;
   const response = await axios.get(endpoint);
+
   if (!response.data || !response.data.length)
     return next(new ErrorHandler("Odds Expired", 400));
+
+  const data = response.data[0];
+  const isValidOdds = (list, odds) =>
+    list?.slice(0, 3).some((o) => o?.price === odds);
+
+  if (category === "match odds") {
+    const runner = data?.runners.find((r) => r.selectionId === selectionId);
+    if (!runner) return next(new ErrorHandler("Odds Expired", 400));
+
+    const priceList = type === "back" ? runner.back : runner.lay;
+    if (!priceList || !Array.isArray(priceList) || priceList.length < 3)
+      return next(new ErrorHandler("Invalid odds data", 400));
+
+    if (!isValidOdds(priceList, odds)) {
+      return next(new ErrorHandler("Odds Changed", 400));
+    }
+  } else if (category === "bookmaker") {
+    const [matchOddsRes, bookmakerRes] = await Promise.all([
+      axios.get(`${API_BASE_URL}/RMatchOdds?Mids=${matchOddsMarketId}`),
+      axios.get(`${API_BASE_URL}/GetBookMaker?eventid=${eventId}`),
+    ]);
+
+    const matchOddsData = matchOddsRes.data[0];
+    const bookmakerData = bookmakerRes.data || [];
+
+    if (!matchOddsData || !Array.isArray(matchOddsData?.runners))
+      return next(new ErrorHandler("Invalid bookmaker odds data", 400));
+
+    let val1 = null,
+      val2 = null;
+    bookmakerData.map((b) => {
+      const hasZeroPercent = /0%\b/i.test(b.market.name);
+      const isMarketOpen = b.market.status?.toLowerCase().trim() === "open";
+
+      if (isMarketOpen && hasZeroPercent && data?.runners) {
+        const runner0Price = matchOddsData?.runners?.[0]?.[type]?.[0]?.price;
+        const runner1Price = matchOddsData?.runners?.[1]?.[type]?.[0]?.price;
+
+        if (typeof runner0Price === "number")
+          val1 = Math.floor(runner0Price * 100) - 100;
+
+        if (typeof runner1Price === "number")
+          val2 = Math.floor(runner1Price * 100) - 100;
+      }
+    });
+
+    const runner = data?.runners.find((r) => r.selectionId === selectionId);
+    if (!runner) return next(new ErrorHandler("Odds Expired", 400));
+
+    const priceList = type === "back" ? runner.back : runner.lay;
+    if (!priceList || !Array.isArray(priceList) || priceList.length < 3)
+      return next(new ErrorHandler("Invalid odds data", 400));
+
+    if (
+      ![
+        priceList[0].price,
+        priceList[1]?.price,
+        priceList[2]?.price,
+        val1,
+        val2,
+      ].includes(odds)
+    ) {
+      return next(new ErrorHandler("Odds Changed", 400));
+    }
+  } else {
+    const priceList = type === "back" ? data.back : data.lay;
+    if (!priceList || !Array.isArray(priceList) || priceList.length < 3)
+      return next(new ErrorHandler("Invalid odds data", 400));
+
+    if (priceList[0].price !== fancyNumber || priceList[0].size !== odds)
+      return next(new ErrorHandler("Odds Changed", 400));
+  }
 
   const { profit, loss, error } = calculateProfitAndLoss(
     stake,
