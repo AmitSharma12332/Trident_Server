@@ -55,7 +55,7 @@ const schema = new Schema(
     },
     status: {
       type: String,
-      enum: ["won", "pending", "lost"],
+      enum: ["won", "pending", "lost", "cancelled"],
       default: "pending",
     },
   },
