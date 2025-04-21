@@ -25,6 +25,7 @@ const placeBet = TryCatch(async (req, res, next) => {
     eventId,
     match,
     marketId,
+    matchOddsMarketId,
     selection,
     selectionId,
     fancyNumber,
