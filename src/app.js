@@ -64,8 +64,8 @@ app.get("/", (req, res) => {
 
 const sportsDataCache = {};
 // 1 -> Football, 2 -> Tennis, 4 -> Cricket, 7 -> Horse Racing
-// const sportIds = [1, 2, 4, 7];
-const sportIds = [4];
+const sportIds = [1, 2, 4, 7];
+// const sportIds = [4];
 
 const fetchSportsData = async () => {
   try {
